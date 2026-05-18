@@ -19,7 +19,7 @@ const overlay = document.getElementById("overlay");
 const startBtn = document.getElementById("start-btn");
 const currentScoreElement = document.getElementById("current-score");
 
-// NUEVAS VARIABLES DE NAVEGACIÓN
+// VARIABLES DE NAVEGACIÓN
 const btnProyectos = document.getElementById("btn-volver-proyectos");
 const btnAtras = document.getElementById("btn-atras-inicio");
 
@@ -36,6 +36,29 @@ const player = {
 
 const groundHeight = 80; // Suelo un pelín más alto para mejor visibilidad móvil
 
+// CONTROLES DE PULSACIÓN CONTINUA
+let isPressing = false;
+
+function handlePressStart(e) {
+    // Si pulsas un botón o enlace de la interfaz, no saltes
+    if (e.target.tagName === "BUTTON" || e.target.tagName === "A") return;
+    
+    e.preventDefault(); // Evita selecciones de texto y zooms raros
+    isPressing = true;
+}
+
+function handlePressEnd() {
+    isPressing = false;
+}
+
+// Registro de eventos táctiles y ratón
+window.addEventListener("touchstart", handlePressStart, { passive: false });
+window.addEventListener("touchend", handlePressEnd);
+window.addEventListener("touchcancel", handlePressEnd);
+window.addEventListener("mousedown", handlePressStart);
+window.addEventListener("mouseup", handlePressEnd);
+
+
 // START ENGINE
 function startGame() {
     gameActive = true;
@@ -47,8 +70,8 @@ function startGame() {
     player.isGrounded = true;
 
     // Cambiar visibilidad de los botones superiores
-    btnProyectos.classList.add("hidden"); // Escondemos "Volver a Proyectos"
-    btnAtras.classList.remove("hidden");  // Mostramos "Atrás"
+    btnProyectos.classList.add("hidden"); 
+    btnAtras.classList.remove("hidden");  
 
     overlay.style.display = "none";
     requestAnimationFrame(gameLoop);
@@ -57,6 +80,12 @@ function startGame() {
 // LOGIC UPDATE
 function update() {
     if (!gameActive) return;
+
+    // Si el usuario mantiene pulsado y está en el suelo, salta automáticamente
+    if (isPressing && player.isGrounded) {
+        player.vy = player.jumpForce;
+        player.isGrounded = false;
+    }
 
     player.vy += player.gravity;
     player.y += player.vy;
@@ -70,40 +99,22 @@ function update() {
     }
 }
 
-// JUMP CONTROLS
-function playerJump() {
-    if (gameActive && player.isGrounded) {
-        player.vy = player.jumpForce;
-        player.isGrounded = false;
-    }
-}
-
-window.addEventListener("touchstart", (e) => {
-    if (e.target.tagName !== "BUTTON" && e.target.tagName !== "A") {
-        playerJump();
-    }
-});
-
-window.addEventListener("mousedown", (e) => {
-    if (e.target.tagName !== "BUTTON" && e.target.tagName !== "A") {
-        playerJump();
-    }
-});
-
+// ACCIÓN DEL BOTÓN "INICIAR CORE"
 startBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     startGame();
 });
 
-// NUEVO: ACCIÓN DEL BOTÓN "ATRÁS"
+// ACCIÓN DEL BOTÓN "ATRÁS"
 btnAtras.addEventListener("click", (e) => {
-    e.stopPropagation(); // Evita que salte el personaje al pulsar el botón
+    e.stopPropagation(); 
     
-    gameActive = false; // Detiene el bucle del juego
+    gameActive = false; // Detiene el juego
+    isPressing = false; // Resetea la pulsación por si acaso
 
     // Cambiar visibilidad de los botones superiores
-    btnAtras.classList.add("hidden");       // Escondemos "Atrás"
-    btnProyectos.classList.remove("hidden"); // Volvemos a mostrar "Volver a Proyectos"
+    btnAtras.classList.add("hidden");       
+    btnProyectos.classList.remove("hidden"); 
 
     // Limpiar el canvas para dejarlo oscuro de fondo
     ctx.clearRect(0, 0, canvas.width, canvas.height);
