@@ -2,7 +2,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Courier New', Courier, monospace; /* Tipografía estilo terminal */
+    font-family: 'Courier New', Courier, monospace;
 }
 
 body {
@@ -13,12 +13,10 @@ body {
     align-items: center;
     overflow: hidden;
     padding: 10px;
-
-    /* --- EVITAR SELECCIÓN Y MENÚS EN MÓVIL --- */
-    touch-action: none;              /* Evita el zoom raro al pulsar repetidamente */
-    user-select: none;               /* Evita que se seleccione texto */
-    -webkit-user-select: none;       /* Para navegadores Safari/iOS */
-    -webkit-touch-callout: none;     /* Evita que salga el menú de copiar/guardar imagen */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .game-container {
@@ -34,7 +32,6 @@ body {
     overflow: hidden;
 }
 
-/* Líneas horizontales de escaneo (Efecto CRT antiguo) */
 .scanlines {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -44,9 +41,10 @@ body {
     pointer-events: none;
 }
 
+/* AJUSTE DE INTERFAZ SUPERIOR (Bajado a 30px por seguridad en móviles) */
 .btn-volver {
     position: absolute;
-    top: 20px;
+    top: 30px;
     left: 20px;
     background: rgba(0, 210, 255, 0.07);
     color: #00d2ff;
@@ -61,7 +59,7 @@ body {
     -webkit-backdrop-filter: blur(8px);
     transition: all 0.2s ease;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    cursor: pointer; /* Asegura el cursor de mano en el botón de atrás */
+    cursor: pointer;
 }
 
 .btn-volver:active {
@@ -73,7 +71,7 @@ body {
 
 .hud {
     position: absolute;
-    top: 20px;
+    top: 30px;
     right: 20px;
     display: flex;
     flex-direction: column;
@@ -100,33 +98,28 @@ canvas {
     display: block;
 }
 
-/* Fondo del menú con rejilla de datos retro-futurista */
 .overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: #070c1a;
-    background-image: 
-        linear-gradient(rgba(0, 210, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 210, 255, 0.03) 1px, transparent 1px);
-    background-size: 20px 20px;
+    background: rgba(7, 12, 26, 0.4); /* Cambiado a semitransparente para ver la animación detrás */
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 25px;
     z-index: 20;
+    overflow-y: auto;
 }
 
-/* Caja contenedora transparente */
 .menu-box {
-    background: rgba(14, 23, 46, 0.65);
+    background: rgba(14, 23, 46, 0.85);
     border: 1px solid rgba(0, 210, 255, 0.2);
     border-top: 4px solid #00d2ff;
-    padding: 35px 25px;
+    padding: 25px 20px;
     border-radius: 16px;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     width: 100%;
-    max-width: 320px;
+    max-width: 340px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -139,7 +132,7 @@ canvas {
     background: rgba(255, 0, 85, 0.1);
     padding: 4px 10px;
     border-radius: 4px;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     border: 1px solid rgba(255, 0, 85, 0.2);
     font-weight: bold;
     letter-spacing: 2px;
@@ -147,30 +140,44 @@ canvas {
 
 .neon-title {
     color: #ffffff;
-    font-size: 2.6rem;
+    font-size: 2.3rem;
     font-weight: 900;
     line-height: 1.1;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     text-align: center;
     letter-spacing: -1px;
     text-shadow: 0 0 15px rgba(0, 210, 255, 0.6);
 }
 
+.neon-subtitle {
+    color: #ffffff;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    text-shadow: 0 0 10px rgba(0, 210, 255, 0.6);
+}
+
 #game-message {
     color: #8da2cf;
     font-size: 0.75rem;
-    margin-bottom: 30px;
+    margin-bottom: 15px;
     text-align: center;
     line-height: 1.4;
     font-weight: bold;
 }
 
-/* Botón con degradado premium a juego con tu portafolio */
+.user-welcome-text {
+    color: #00ffaa;
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-shadow: 0 0 5px #00ffaa;
+}
+
 .cyber-btn {
     background: linear-gradient(90deg, #00d2ff, #00ffaa);
     color: #070c1a;
     border: none;
-    padding: 14px 40px;
+    padding: 12px 40px;
     font-size: 0.95rem;
     font-weight: bold;
     cursor: pointer;
@@ -179,6 +186,7 @@ canvas {
     transition: all 0.2s ease;
     width: 100%;
     letter-spacing: 1px;
+    margin-bottom: 10px;
 }
 
 .cyber-btn:active {
@@ -186,7 +194,87 @@ canvas {
     box-shadow: 0 0 5px rgba(0, 255, 170, 0.1);
 }
 
-/* --- CLASE DE NAVEGACIÓN --- */
+.auth-menu-buttons {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.btn-secundario {
+    flex: 1;
+    background: rgba(0, 210, 255, 0.05);
+    color: #38bdf8;
+    border: 1px solid rgba(0, 210, 255, 0.3);
+    padding: 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.btn-secundario:active {
+    background: rgba(0, 210, 255, 0.2);
+}
+
+/* FORMULARIOS E INPUTS */
+.cyber-input {
+    width: 100%;
+    background: #070c1a;
+    border: 1px solid rgba(0, 210, 255, 0.3);
+    padding: 10px;
+    color: #ffffff;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 0.8rem;
+}
+.cyber-input:focus {
+    outline: none;
+    border-color: #00ffaa;
+    box-shadow: 0 0 8px rgba(0, 255, 170, 0.3);
+}
+
+.error-msg {
+    color: #ff0055;
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+/* LISTA DE CLASIFICACIONES */
+.leaderboard-box {
+    width: 100%;
+    border-top: 1px dashed rgba(0, 210, 255, 0.3);
+    padding-top: 15px;
+    margin-top: 5px;
+}
+.leaderboard-box h3 {
+    color: #ffaa00;
+    font-size: 0.75rem;
+    margin-bottom: 8px;
+    text-align: center;
+    letter-spacing: 1px;
+}
+.leaderboard-box ul {
+    list-style: none;
+    max-height: 90px;
+    overflow-y: auto;
+}
+.leaderboard-box li {
+    display: flex;
+    justify-content: space-between;
+    color: #8da2cf;
+    font-size: 0.75rem;
+    padding: 3px 5px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.leaderboard-box li.top-player {
+    color: #00ffaa;
+    font-weight: bold;
+}
+
 .hidden {
     display: none !important;
 }
