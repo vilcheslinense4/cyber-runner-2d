@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber-Runner 2D</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="game-container">
+        <a href="https://vilcheslinense4.github.io/Mi-primer-portafolios/" class="btn-volver">⬅️ Volver a Proyectos</a>
+
+        <div class="hud">
+            <div class="score-box">SCORE: <span id="current-score">0000</span></div>
+            <div class="score-box">MAX: <span id="max-score">0000</span></div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="overlay" class="overlay">
+            <h1 class="neon-title">CYBER-RUNNER</h1>
+            <p id="game-message">PULSA PARA INICIAR TRANSMISIÓN</p>
+            <button id="start-btn" class="cyber-btn">INICIAR CORE</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
