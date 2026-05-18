@@ -13,6 +13,12 @@ body {
     align-items: center;
     overflow: hidden;
     padding: 10px;
+
+    /* --- EVITAR SELECCIÓN Y MENÚS EN MÓVIL --- */
+    touch-action: none;              /* Evita el zoom raro al pulsar repetidamente */
+    user-select: none;               /* Evita que se seleccione texto */
+    -webkit-user-select: none;       /* Para navegadores Safari/iOS */
+    -webkit-touch-callout: none;     /* Evita que salga el menú de copiar/guardar imagen */
 }
 
 .game-container {
@@ -180,7 +186,7 @@ canvas {
     box-shadow: 0 0 5px rgba(0, 255, 170, 0.1);
 }
 
-/* --- CLASE DE NAVEGACIÓN NUEVA --- */
+/* --- CLASE DE NAVEGACIÓN --- */
 .hidden {
     display: none !important;
 }
