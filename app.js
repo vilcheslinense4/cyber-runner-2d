@@ -12,6 +12,7 @@ resizeCanvas();
 let gameActive = false;
 let score = 0;
 let maxScore = 0;
+let distanceTraveled = 0; // Para medir el progreso de la barra
 
 const overlay = document.getElementById("overlay");
 const startBtn = document.getElementById("start-btn");
@@ -20,7 +21,7 @@ const currentScoreElement = document.getElementById("current-score");
 const btnProyectos = document.getElementById("btn-volver-proyectos");
 const btnAtras = document.getElementById("btn-atras-inicio");
 
-// PROPIEDADES DEL JUGADOR
+// PROPIEDADES DEL JUGADOR (Añadido sistema de rotación y estela)
 const player = {
     x: 60,
     y: 0,
@@ -28,15 +29,17 @@ const player = {
     vy: 0,
     gravity: 0.65, 
     jumpForce: -11.5,
-    isGrounded: false
+    isGrounded: false,
+    angle: 0,          // Ángulo de rotación visual
+    trail: []          // Lista para guardar las partículas de la estela
 };
 
 const groundHeight = 80;
 
-// VARIABLES DEL MOTOR DE OBSTÁCULOS (REDISEÑADO)
+// VARIABLES DEL MOTOR DE OBSTÁCULOS
 let obstacles = [];
 let spawnQueue = []; 
-let minDistanceTimer = 0; // Evita que se pisen las estructuras en horizontal
+let minDistanceTimer = 0; 
 let gameSpeed = 5.5;         
 
 // ANIMACIÓN DE FONDO PARA EL MENÚ
@@ -179,15 +182,18 @@ function actualizarLeaderboard() {
 }
 
 // ==========================================
-// 🎮 MOTOR MATEMÁTICO DE NIVELES (SIN ENCOLOQUES)
+// 🎮 MOTOR DE JUEGO AVANZADO
 // ==========================================
 
 function startGame() {
     gameActive = true;
     score = 0;
     gameSpeed = 5.5;
+    distanceTraveled = 0;
     obstacles = []; 
     spawnQueue = [];
+    player.trail = [];
+    player.angle = 0;
     minDistanceTimer = 0; 
     currentScoreElement.innerText = "0000";
     
@@ -215,7 +221,6 @@ function generarEstructuraAleatoria() {
 
     switch(seleccion) {
         case 'escalera_ritmica':
-            // Escalones limpios con distancia para correr y reaccionar
             spawnQueue.push({ type: 'bloque', xOffset: 0, y: baseFloorY - 30, w: 30, h: 30 });
             spawnQueue.push({ type: 'bloque', xOffset: 110, y: baseFloorY - 60, w: 30, h: 60 });
             spawnQueue.push({ type: 'bloque', xOffset: 220, y: baseFloorY - 90, w: 30, h: 90 });
@@ -227,7 +232,6 @@ function generarEstructuraAleatoria() {
             break;
 
         case 'puente_con_obstaculo':
-            // Corres por encima del puente y saltas un pincho
             spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 50, w: 160, h: 20 });
             spawnQueue.push({ type: 'pincho', xOffset: 70, y: baseFloorY - 80, w: 26, h: 30 });
             break;
@@ -237,7 +241,6 @@ function generarEstructuraAleatoria() {
             break;
 
         case 'tunel_laser':
-            // ¡CORREGIDO! El techo flotante morado ahora está a 65px de altura del suelo. El cuadradito (30px) pasa perfectamente por debajo sin agacharse. No hay pincho en medio.
             spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 65, w: 140, h: 20 });
             break;
 
@@ -252,19 +255,34 @@ function generarEstructuraAleatoria() {
 function update() {
     if (!gameActive) return;
 
+    // Aumentar la barra de progreso general
+    distanceTraveled += gameSpeed * 0.05;
+
     player.vy += player.gravity;
     player.y += player.vy;
+
+    // --- MEJORA: Sistema de Estela de Partículas ---
+    player.trail.push({ x: player.x, y: player.y, opacity: 0.5 });
+    if (player.trail.length > 10) player.trail.shift(); // Conservar solo los últimos 10 fotogramas
+
+    // --- MEJORA: Animación de Rotación ---
+    if (!player.isGrounded) {
+        player.angle += 0.09; // Gira de forma continua en el aire
+    } else {
+        // Al tocar el suelo, alineamos de forma limpia al ángulo plano más cercano (múltiplos de 90° o Pi/2)
+        let targetAngle = Math.round(player.angle / (Math.PI / 2)) * (Math.PI / 2);
+        player.angle += (targetAngle - player.angle) * 0.3; 
+    }
 
     let onPlatform = false;
     let groundY = canvas.height - groundHeight - player.size;
     let actualGroundY = groundY; 
 
-    // CONTROL DE DISTANCIA TOTAL: No permite mezclar ni pisar estructuras entre sí
     minDistanceTimer -= gameSpeed;
     if (minDistanceTimer <= 0 && spawnQueue.length === 0) {
         generarEstructuraAleatoria();
         
-        let currentX = canvas.width + 50; // Aparecen un poco más allá del borde derecho
+        let currentX = canvas.width + 50; 
         let maxSpread = 0;
 
         while (spawnQueue.length > 0) {
@@ -280,12 +298,9 @@ function update() {
                 maxSpread = item.xOffset + item.w;
             }
         }
-
-        // Bloqueamos el generador hasta que toda la estructura pase por completo + un respiro extra de 280px
         minDistanceTimer = maxSpread + 280; 
     }
 
-    // CONTROL DE CAÍDA EN PRECIPICIOS
     for (let obs of obstacles) {
         if (obs.type === 'vacio') {
             if (player.x + 4 > obs.x && player.x + player.size - 4 < obs.x + obs.width) {
@@ -299,7 +314,6 @@ function update() {
         return;
     }
 
-    // COLISIONES LIMPIAS
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.x -= gameSpeed;
@@ -465,16 +479,32 @@ function draw() {
         }
     }
 
+    // --- RENDER JUGADOR CON EFECTOS NUEVOS ---
     if (gameActive) {
+        // Dibujar estela neón trasera primero
+        player.trail.forEach((t, index) => {
+            ctx.fillStyle = `rgba(0, 210, 255, ${index * 0.04})`;
+            ctx.fillRect(t.x, t.y, player.size, player.size);
+        });
+
+        // Dibujar cubo principal rotado
+        ctx.save();
+        ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
+        ctx.rotate(player.angle);
+        
         ctx.fillStyle = "#00d2ff";
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 2;
         ctx.shadowBlur = 15;
         ctx.shadowColor = "#00d2ff";
-        ctx.fillRect(player.x, player.y, player.size, player.size);
-        ctx.strokeRect(player.x, player.y, player.size, player.size);
+        
+        // Dibujamos el cuadrado centrado en su origen de rotación
+        ctx.fillRect(-player.size / 2, -player.size / 2, player.size, player.size);
+        ctx.strokeRect(-player.size / 2, -player.size / 2, player.size, player.size);
+        ctx.restore();
     }
 
+    // Dibujar obstáculos
     for (let obs of obstacles) {
         if (obs.type === 'pincho') {
             ctx.fillStyle = "#ff0055"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.shadowBlur = 15; ctx.shadowColor = "#ff0055";
@@ -490,6 +520,32 @@ function draw() {
         }
     }
     ctx.shadowBlur = 0; 
+
+    // --- MEJORA: Dibujar Barra de Progreso Superior (Estilo GD) ---
+    if (gameActive) {
+        let barWidth = canvas.width * 0.4;
+        let barX = (canvas.width - barWidth) / 2;
+        let barY = 15;
+        let progress = (distanceTraveled % 100) / 100; // Porcentaje cíclico para modo infinito
+
+        // Fondo gris de la barra
+        ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.fillRect(barX, barY, barWidth, 4);
+
+        // Progreso neón relleno
+        ctx.fillStyle = "#00ffaa";
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "#00ffaa";
+        ctx.fillRect(barX, barY, barWidth * progress, 4);
+        ctx.shadowBlur = 0;
+
+        // Texto de porcentaje
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 11px Courier New";
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.floor(progress * 100)}%`, canvas.width / 2, barY + 16);
+        ctx.textAlign = "left"; // Restaurar
+    }
 }
 
 // LOOPS
