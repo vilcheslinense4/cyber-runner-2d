@@ -19,6 +19,10 @@ const overlay = document.getElementById("overlay");
 const startBtn = document.getElementById("start-btn");
 const currentScoreElement = document.getElementById("current-score");
 
+// NUEVAS VARIABLES DE NAVEGACIÓN
+const btnProyectos = document.getElementById("btn-volver-proyectos");
+const btnAtras = document.getElementById("btn-atras-inicio");
+
 // PLAYER PROPERTIES
 const player = {
     x: 60,
@@ -41,6 +45,10 @@ function startGame() {
     player.y = canvas.height - groundHeight - player.size;
     player.vy = 0;
     player.isGrounded = true;
+
+    // Cambiar visibilidad de los botones superiores
+    btnProyectos.classList.add("hidden"); // Escondemos "Volver a Proyectos"
+    btnAtras.classList.remove("hidden");  // Mostramos "Atrás"
 
     overlay.style.display = "none";
     requestAnimationFrame(gameLoop);
@@ -85,6 +93,23 @@ window.addEventListener("mousedown", (e) => {
 startBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     startGame();
+});
+
+// NUEVO: ACCIÓN DEL BOTÓN "ATRÁS"
+btnAtras.addEventListener("click", (e) => {
+    e.stopPropagation(); // Evita que salte el personaje al pulsar el botón
+    
+    gameActive = false; // Detiene el bucle del juego
+
+    // Cambiar visibilidad de los botones superiores
+    btnAtras.classList.add("hidden");       // Escondemos "Atrás"
+    btnProyectos.classList.remove("hidden"); // Volvemos a mostrar "Volver a Proyectos"
+
+    // Limpiar el canvas para dejarlo oscuro de fondo
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Volver a mostrar el menú overlay
+    overlay.style.display = "flex";
 });
 
 // DRAW GRAPHICS
