@@ -34,16 +34,20 @@ const player = {
     isGrounded: false
 };
 
-const groundHeight = 80; // Suelo un pelín más alto para mejor visibilidad móvil
+const groundHeight = 80;
+
+// --- NUEVAS VARIABLES PARA OBSTÁCULOS ---
+let obstacles = [];
+let obstacleTimer = 0;
+let obstacleInterval = 90; // Cada cuántos frames sale un obstáculo nuevo
+let gameSpeed = 5;         // Velocidad de movimiento del juego
 
 // CONTROLES DE PULSACIÓN CONTINUA
 let isPressing = false;
 
 function handlePressStart(e) {
-    // Si pulsas un botón o enlace de la interfaz, no saltes
     if (e.target.tagName === "BUTTON" || e.target.tagName === "A") return;
-    
-    e.preventDefault(); // Evita selecciones de texto y zooms raros
+    e.preventDefault(); 
     isPressing = true;
 }
 
@@ -51,25 +55,25 @@ function handlePressEnd() {
     isPressing = false;
 }
 
-// Registro de eventos táctiles y ratón
 window.addEventListener("touchstart", handlePressStart, { passive: false });
 window.addEventListener("touchend", handlePressEnd);
 window.addEventListener("touchcancel", handlePressEnd);
 window.addEventListener("mousedown", handlePressStart);
 window.addEventListener("mouseup", handlePressEnd);
 
-
 // START ENGINE
 function startGame() {
     gameActive = true;
     score = 0;
+    gameSpeed = 5;
+    obstacles = []; // Limpiamos obstáculos de la partida anterior
+    obstacleTimer = 0;
     currentScoreElement.innerText = "0000";
     
     player.y = canvas.height - groundHeight - player.size;
     player.vy = 0;
     player.isGrounded = true;
 
-    // Cambiar visibilidad de los botones superiores
     btnProyectos.classList.add("hidden"); 
     btnAtras.classList.remove("hidden");  
 
@@ -81,7 +85,7 @@ function startGame() {
 function update() {
     if (!gameActive) return;
 
-    // Si el usuario mantiene pulsado y está en el suelo, salta automáticamente
+    // Salto continuo
     if (isPressing && player.isGrounded) {
         player.vy = player.jumpForce;
         player.isGrounded = false;
@@ -97,6 +101,68 @@ function update() {
         player.vy = 0;
         player.isGrounded = true;
     }
+
+    // --- LOGICA DE OBSTÁCULOS ---
+    obstacleTimer++;
+    if (obstacleTimer >= obstacleInterval) {
+        // Creamos un obstáculo con altura aleatoria
+        let obsHeight = Math.floor(Math.random() * 30) + 30; // Altura entre 30px y 60px
+        obstacles.push({
+            x: canvas.width,
+            y: canvas.height - groundHeight - obsHeight,
+            width: 20,
+            height: obsHeight
+        });
+        obstacleTimer = 0;
+    }
+
+    // Mover y procesar obstáculos
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].x -= gameSpeed;
+
+        // Colisión con el jugador (Caja AABB)
+        if (
+            player.x < obstacles[i].x + obstacles[i].width &&
+            player.x + player.size > obstacles[i].x &&
+            player.y < obstacles[i].y + obstacles[i].height &&
+            player.y + player.size > obstacles[i].y
+        ) {
+            gameOver();
+            return;
+        }
+
+        // Si el obstáculo sale de la pantalla, sumamos punto
+        if (obstacles[i].x + obstacles[i].width < 0) {
+            obstacles.splice(i, 1);
+            score++;
+            currentScoreElement.innerText = String(score).padStart(4, '0');
+            
+            // Subir la velocidad poco a poco para que sea más difícil
+            if (score % 5 === 0) {
+                gameSpeed += 0.5;
+            }
+        }
+    }
+}
+
+// FUNCTION: GAME OVER
+function gameOver() {
+    gameActive = false;
+    isPressing = false;
+
+    // Comprobar récord máximo
+    if (score > maxScore) {
+        maxScore = score;
+        localStorage.setItem("cyberRunnerMaxScore", maxScore);
+        document.getElementById("max-score").innerText = String(maxScore).padStart(4, '0');
+    }
+
+    // Cambiar mensaje del menú y reabrirlo
+    document.getElementById("game-message").innerText = `⚠️ SISTEMA CAÍDO. SCORE: ${String(score).padStart(4, '0')}. REINTENTAR...`;
+    
+    btnAtras.classList.add("hidden");       
+    btnProyectos.classList.remove("hidden"); 
+    overlay.style.display = "flex";
 }
 
 // ACCIÓN DEL BOTÓN "INICIAR CORE"
@@ -108,18 +174,12 @@ startBtn.addEventListener("click", (e) => {
 // ACCIÓN DEL BOTÓN "ATRÁS"
 btnAtras.addEventListener("click", (e) => {
     e.stopPropagation(); 
-    
-    gameActive = false; // Detiene el juego
-    isPressing = false; // Resetea la pulsación por si acaso
-
-    // Cambiar visibilidad de los botones superiores
+    gameActive = false; 
+    isPressing = false;
     btnAtras.classList.add("hidden");       
     btnProyectos.classList.remove("hidden"); 
-
-    // Limpiar el canvas para dejarlo oscuro de fondo
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Volver a mostrar el menú overlay
+    document.getElementById("game-message").innerText = "> PULSA PARA INICIAR TRANSMISIÓN DE DATOS...";
     overlay.style.display = "flex";
 });
 
@@ -146,13 +206,23 @@ function draw() {
     ctx.fillRect(player.x, player.y, player.size, player.size);
     ctx.strokeRect(player.x, player.y, player.size, player.size);
 
+    // 3. Dibujar Obstáculos (Barreras rojas láser de ciberseguridad)
+    ctx.fillStyle = "#ff0055";
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1;
+    ctx.shadowColor = "#ff0055";
+    for (let obs of obstacles) {
+        ctx.shadowBlur = 12;
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+    }
+
     ctx.shadowBlur = 0; // Limpiar sombras
 }
 
 // LOOP MAIN ENGINE
 function gameLoop() {
     if (!gameActive) return;
-
     update();
     draw();
     requestAnimationFrame(gameLoop);
