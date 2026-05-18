@@ -65,7 +65,7 @@ window.addEventListener("mousedown", handlePressStart);
 window.addEventListener("mouseup", handlePressEnd);
 
 // ==========================================
-// 🛡️ SISTEMA DE USUARIOS & LOCALSTORAGE
+// 🛡️ SISTEMA DE USUARIOS & LOCALSTORAGE (FIXED)
 // ==========================================
 let currentUser = null;
 
@@ -170,6 +170,7 @@ btnLogout.addEventListener("click", () => {
 
 function actualizarLeaderboard() {
     const list = document.getElementById("leaderboard-list");
+    if (!list) return; // Salvaguarda en caso de que no se cargue a tiempo el DOM
     list.innerHTML = "";
     let usuarios = JSON.parse(localStorage.getItem("cyberUsers")) || [];
     usuarios.sort((a, b) => b.maxScore - a.maxScore);
@@ -221,7 +222,6 @@ function generarEstructuraAleatoria() {
 
     switch(seleccion) {
         case 'escalera_ritmica':
-            // Sincronización corregida para las nuevas físicas estables
             spawnQueue.push({ type: 'bloque', xOffset: 0, y: baseFloorY - 22, w: 22, h: 22 });
             spawnQueue.push({ type: 'bloque', xOffset: 144, y: baseFloorY - 44, w: 22, h: 44 });
             spawnQueue.push({ type: 'bloque', xOffset: 288, y: baseFloorY - 66, w: 22, h: 66 });
@@ -311,7 +311,7 @@ function update() {
         return;
     }
 
-    // RESOLUCIÓN DE COLISIONES PERFECCIONADA
+    // RESOLUCIÓN DE COLISIONES
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.x -= gameSpeed;
@@ -321,7 +321,6 @@ function update() {
             continue;
         }
 
-        // Reducimos levemente el hitbox lateral interno para evitar muertes injustas de esquina
         let collision = player.x + 2 < obs.x + obs.width &&
                         player.x + player.size - 2 > obs.x &&
                         player.y < obs.y + obs.height &&
@@ -335,14 +334,12 @@ function update() {
                 let feetY = player.y + player.size;
                 let prevFeetY = feetY - player.vy;
 
-                // CORRECCIÓN CLAVE: Mayor margen vertical (+12) y comprobación limpia de caída
                 if (player.vy >= 0 && prevFeetY <= obs.y + 12) {
                     player.y = obs.y - player.size;
                     player.vy = 0;
                     player.isGrounded = true;
                     onPlatform = true;
                 } else {
-                    // Si choca de frente contra la pared del bloque, colapsa
                     gameOver();
                     return;
                 }
@@ -377,9 +374,10 @@ function gameOver() {
     gameActive = false;
     isPressing = false;
 
+    // Sincronización impecable del récord local en caliente
     if (currentUser) {
         if (score > currentUser.maxScore) {
-            currentUser.maxScore = score;
+            currentUser.maxScore = score; // Actualizar objeto activo en RAM
             maxScore = score;
             document.getElementById("max-score").innerText = String(maxScore).padStart(4, '0');
             
