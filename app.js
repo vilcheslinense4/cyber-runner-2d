@@ -21,26 +21,26 @@ const currentScoreElement = document.getElementById("current-score");
 const btnProyectos = document.getElementById("btn-volver-proyectos");
 const btnAtras = document.getElementById("btn-atras-inicio");
 
-// PROPIEDADES DEL JUGADOR (Cubo reducido a 22px para dar un 40% más de campo visual)
+// PROPIEDADES DEL JUGADOR
 const player = {
-    x: 70, // Un poco más a la izquierda para ganar espacio de reacción
+    x: 70, 
     y: 0,
-    size: 22,          // REAJUSTADO (Antes 30px): Da más margen visual
+    size: 22,          
     vy: 0,
-    gravity: 0.52,     // REAJUSTADO para el nuevo tamaño de pantalla
-    jumpForce: -9.5,   // REAJUSTADO para una parábola proporcional perfecta
+    gravity: 0.54,     // Un pelín más de gravedad para evitar el efecto flotante
+    jumpForce: -9.8,   // Fuerza de salto equilibrada para la nueva gravedad
     isGrounded: false,
     angle: 0,          
     trail: []          
 };
 
-const groundHeight = 70; // Altura del suelo un poco más estilizada
+const groundHeight = 70; 
 
 // VARIABLES DEL MOTOR DE OBSTÁCULOS
 let obstacles = [];
 let spawnQueue = []; 
 let minDistanceTimer = 0; 
-let gameSpeed = 4.4;      // Velocidad base reajustada al nuevo tamaño (se siente igual de rápido pero ves más pista)   
+let gameSpeed = 4.4;      
 
 // ANIMACIÓN DE FONDO PARA EL MENÚ
 let menuBackgroundElements = [];
@@ -188,7 +188,7 @@ function actualizarLeaderboard() {
 function startGame() {
     gameActive = true;
     score = 0;
-    gameSpeed = 4.4; // Ajuste de velocidad inicial proporcional
+    gameSpeed = 4.4; 
     distanceTraveled = 0;
     obstacles = []; 
     spawnQueue = [];
@@ -221,9 +221,7 @@ function generarEstructuraAleatoria() {
 
     switch(seleccion) {
         case 'escalera_ritmica':
-            // ¡NUEVA DISTANCIA DE CAMPO ALEJADO!
-            // Con el zoom out aplicado, la parábola matemática exacta de caída es de 144 píxeles.
-            // Los bloques bajan proporcionalmente a 22px de ancho.
+            // Sincronización corregida para las nuevas físicas estables
             spawnQueue.push({ type: 'bloque', xOffset: 0, y: baseFloorY - 22, w: 22, h: 22 });
             spawnQueue.push({ type: 'bloque', xOffset: 144, y: baseFloorY - 44, w: 22, h: 44 });
             spawnQueue.push({ type: 'bloque', xOffset: 288, y: baseFloorY - 66, w: 22, h: 66 });
@@ -244,7 +242,6 @@ function generarEstructuraAleatoria() {
             break;
 
         case 'tunel_laser':
-            // Pasillo adaptado perfectamente para los 22px del cubo. Pasa sobrado.
             spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 50, w: 110, h: 15 });
             break;
 
@@ -298,13 +295,12 @@ function update() {
                 maxSpread = item.xOffset + item.w;
             }
         }
-        // Margen extra de confort visual de 320px tras pasar el bloque
         minDistanceTimer = maxSpread + 320; 
     }
 
     for (let obs of obstacles) {
         if (obs.type === 'vacio') {
-            if (player.x + 3 > obs.x && player.x + player.size - 3 < obs.x + obs.width) {
+            if (player.x + 4 > obs.x && player.x + player.size - 4 < obs.x + obs.width) {
                 actualGroundY = canvas.height + 100; 
             }
         }
@@ -315,6 +311,7 @@ function update() {
         return;
     }
 
+    // RESOLUCIÓN DE COLISIONES PERFECCIONADA
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.x -= gameSpeed;
@@ -324,8 +321,9 @@ function update() {
             continue;
         }
 
-        let collision = player.x < obs.x + obs.width &&
-                        player.x + player.size > obs.x &&
+        // Reducimos levemente el hitbox lateral interno para evitar muertes injustas de esquina
+        let collision = player.x + 2 < obs.x + obs.width &&
+                        player.x + player.size - 2 > obs.x &&
                         player.y < obs.y + obs.height &&
                         player.y + player.size > obs.y;
 
@@ -337,12 +335,14 @@ function update() {
                 let feetY = player.y + player.size;
                 let prevFeetY = feetY - player.vy;
 
-                if (player.vy >= 0 && prevFeetY <= obs.y + 8) {
+                // CORRECCIÓN CLAVE: Mayor margen vertical (+12) y comprobación limpia de caída
+                if (player.vy >= 0 && prevFeetY <= obs.y + 12) {
                     player.y = obs.y - player.size;
                     player.vy = 0;
                     player.isGrounded = true;
                     onPlatform = true;
                 } else {
+                    // Si choca de frente contra la pared del bloque, colapsa
                     gameOver();
                     return;
                 }
@@ -353,7 +353,7 @@ function update() {
             obstacles.splice(i, 1);
             score++;
             currentScoreElement.innerText = String(score).padStart(4, '0');
-            if (score % 6 === 0) gameSpeed += 0.3; // Sube la dificultad paulatinamente como bien decías
+            if (score % 6 === 0) gameSpeed += 0.3; 
         }
     }
 
