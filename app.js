@@ -33,25 +33,21 @@ const player = {
 
 const groundHeight = 80;
 
-// VARIABLES DEL MOTOR DE OBSTÁCULOS (NIVELES RÍTMICOS SEPARADOS)
+// VARIABLES DEL MOTOR DE OBSTÁCULOS (REDISEÑADO)
 let obstacles = [];
 let spawnQueue = []; 
-let obstacleTimer = 0;
-let obstacleInterval = 90; 
+let minDistanceTimer = 0; // Evita que se pisen las estructuras en horizontal
 let gameSpeed = 5.5;         
 
 // ANIMACIÓN DE FONDO PARA EL MENÚ
 let menuBackgroundElements = [];
 let menuFloorScroll = 0;
 
-// CONTROLES DE PULSACIÓN CONTINUA (CORREGIDO: Solo actúan EN PARTIDA)
+// CONTROLES DE PULSACIÓN CONTINUA
 let isPressing = false;
 
 function handlePressStart(e) {
-    // Si la partida no ha empezado, dejamos que el navegador gestione los clics normales en los menús
     if (!gameActive) return;
-    
-    // Si estamos jugando, bloqueamos el scroll nativo y saltamos
     e.preventDefault(); 
     isPressing = true;
 }
@@ -183,7 +179,7 @@ function actualizarLeaderboard() {
 }
 
 // ==========================================
-// 🎮 MOTOR DE JUEGO & MAPAS RÍTMICOS
+// 🎮 MOTOR MATEMÁTICO DE NIVELES (SIN ENCOLOQUES)
 // ==========================================
 
 function startGame() {
@@ -192,7 +188,7 @@ function startGame() {
     gameSpeed = 5.5;
     obstacles = []; 
     spawnQueue = [];
-    obstacleTimer = 0;
+    minDistanceTimer = 0; 
     currentScoreElement.innerText = "0000";
     
     player.y = canvas.height - groundHeight - player.size;
@@ -219,9 +215,10 @@ function generarEstructuraAleatoria() {
 
     switch(seleccion) {
         case 'escalera_ritmica':
+            // Escalones limpios con distancia para correr y reaccionar
             spawnQueue.push({ type: 'bloque', xOffset: 0, y: baseFloorY - 30, w: 30, h: 30 });
-            spawnQueue.push({ type: 'bloque', xOffset: 95, y: baseFloorY - 60, w: 30, h: 60 });
-            spawnQueue.push({ type: 'bloque', xOffset: 190, y: baseFloorY - 90, w: 30, h: 90 });
+            spawnQueue.push({ type: 'bloque', xOffset: 110, y: baseFloorY - 60, w: 30, h: 60 });
+            spawnQueue.push({ type: 'bloque', xOffset: 220, y: baseFloorY - 90, w: 30, h: 90 });
             break;
 
         case 'doble_pincho_suelo':
@@ -230,23 +227,24 @@ function generarEstructuraAleatoria() {
             break;
 
         case 'puente_con_obstaculo':
-            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 50, w: 150, h: 20 });
-            spawnQueue.push({ type: 'pincho', xOffset: 60, y: baseFloorY - 80, w: 26, h: 30 });
+            // Corres por encima del puente y saltas un pincho
+            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 50, w: 160, h: 20 });
+            spawnQueue.push({ type: 'pincho', xOffset: 70, y: baseFloorY - 80, w: 26, h: 30 });
             break;
 
         case 'gran_precipicio':
-            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 90, h: groundHeight });
+            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 95, h: groundHeight });
             break;
 
         case 'tunel_laser':
-            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 110, w: 100, h: 20 });
-            spawnQueue.push({ type: 'pincho', xOffset: 35, y: baseFloorY - 30, w: 26, h: 30 });
+            // ¡CORREGIDO! El techo flotante morado ahora está a 65px de altura del suelo. El cuadradito (30px) pasa perfectamente por debajo sin agacharse. No hay pincho en medio.
+            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 65, w: 140, h: 20 });
             break;
 
         case 'plataformas_flotantes_secuenciales':
-            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 220, h: groundHeight });
+            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 240, h: groundHeight });
             spawnQueue.push({ type: 'puente', xOffset: 10, y: baseFloorY - 45, w: 60, h: 15 });
-            spawnQueue.push({ type: 'puente', xOffset: 120, y: baseFloorY - 80, w: 60, h: 15 });
+            spawnQueue.push({ type: 'puente', xOffset: 130, y: baseFloorY - 80, w: 60, h: 15 });
             break;
     }
 }
@@ -261,13 +259,14 @@ function update() {
     let groundY = canvas.height - groundHeight - player.size;
     let actualGroundY = groundY; 
 
-    obstacleTimer++;
-    if (obstacleTimer >= obstacleInterval) {
-        if (spawnQueue.length === 0) {
-            generarEstructuraAleatoria();
-        }
+    // CONTROL DE DISTANCIA TOTAL: No permite mezclar ni pisar estructuras entre sí
+    minDistanceTimer -= gameSpeed;
+    if (minDistanceTimer <= 0 && spawnQueue.length === 0) {
+        generarEstructuraAleatoria();
         
-        let currentX = canvas.width;
+        let currentX = canvas.width + 50; // Aparecen un poco más allá del borde derecho
+        let maxSpread = 0;
+
         while (spawnQueue.length > 0) {
             let item = spawnQueue.shift();
             obstacles.push({
@@ -277,12 +276,16 @@ function update() {
                 height: item.h,
                 type: item.type
             });
+            if (item.xOffset + item.w > maxSpread) {
+                maxSpread = item.xOffset + item.w;
+            }
         }
 
-        obstacleInterval = Math.floor(Math.random() * 60) + 130;
-        obstacleTimer = 0;
+        // Bloqueamos el generador hasta que toda la estructura pase por completo + un respiro extra de 280px
+        minDistanceTimer = maxSpread + 280; 
     }
 
+    // CONTROL DE CAÍDA EN PRECIPICIOS
     for (let obs of obstacles) {
         if (obs.type === 'vacio') {
             if (player.x + 4 > obs.x && player.x + player.size - 4 < obs.x + obs.width) {
@@ -296,6 +299,7 @@ function update() {
         return;
     }
 
+    // COLISIONES LIMPIAS
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.x -= gameSpeed;
