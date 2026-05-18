@@ -44,15 +44,20 @@ let gameSpeed = 5.5;
 let menuBackgroundElements = [];
 let menuFloorScroll = 0;
 
-// CONTROLES DE PULSACIÓN CONTINUA
+// CONTROLES DE PULSACIÓN CONTINUA (CORREGIDO: Solo actúan EN PARTIDA)
 let isPressing = false;
 
 function handlePressStart(e) {
-    if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON" || e.target.tagName === "A") return;
+    // Si la partida no ha empezado, dejamos que el navegador gestione los clics normales en los menús
+    if (!gameActive) return;
+    
+    // Si estamos jugando, bloqueamos el scroll nativo y saltamos
     e.preventDefault(); 
     isPressing = true;
 }
-function handlePressEnd() { isPressing = false; }
+function handlePressEnd() { 
+    isPressing = false; 
+}
 
 window.addEventListener("touchstart", handlePressStart, { passive: false });
 window.addEventListener("touchend", handlePressEnd);
@@ -178,7 +183,7 @@ function actualizarLeaderboard() {
 }
 
 // ==========================================
-// 🎮 NUEVO MOTOR DE DISEÑO DE MAPAS RÍTMICOS
+// 🎮 MOTOR DE JUEGO & MAPAS RÍTMICOS
 // ==========================================
 
 function startGame() {
@@ -201,7 +206,6 @@ function startGame() {
 }
 
 function generarEstructuraAleatoria() {
-    // Lista expandida con más variedad de mapas estilo Geometry Dash
     const estructuras = [
         'escalera_ritmica', 
         'doble_pincho_suelo', 
@@ -215,37 +219,31 @@ function generarEstructuraAleatoria() {
 
     switch(seleccion) {
         case 'escalera_ritmica':
-            // ¡SOLUCIONADO! Escalones separados por 65px en horizontal para poder saltar cómodamente uno a uno
             spawnQueue.push({ type: 'bloque', xOffset: 0, y: baseFloorY - 30, w: 30, h: 30 });
             spawnQueue.push({ type: 'bloque', xOffset: 95, y: baseFloorY - 60, w: 30, h: 60 });
             spawnQueue.push({ type: 'bloque', xOffset: 190, y: baseFloorY - 90, w: 30, h: 90 });
             break;
 
         case 'doble_pincho_suelo':
-            // Dos pinchos tradicionales juntos en el suelo firme
             spawnQueue.push({ type: 'pincho', xOffset: 0, y: baseFloorY - 30, w: 28, h: 30 });
             spawnQueue.push({ type: 'pincho', xOffset: 28, y: baseFloorY - 30, w: 28, h: 30 });
             break;
 
         case 'puente_con_obstaculo':
-            // Un puente morado largo por el que corres, pero te obliga a saltar un pincho que tiene arriba del lomo
             spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 50, w: 150, h: 20 });
             spawnQueue.push({ type: 'pincho', xOffset: 60, y: baseFloorY - 80, w: 26, h: 30 });
             break;
 
         case 'gran_precipicio':
-            // Un abismo largo en el suelo de 90px. Tienes que saltar justo en el borde para no caer
             spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 90, h: groundHeight });
             break;
 
         case 'tunel_laser':
-            // Techo de bloques morados altos y pinchos abajo. Tienes que calcular un salto corto y controlado
             spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 110, w: 100, h: 20 });
             spawnQueue.push({ type: 'pincho', xOffset: 35, y: baseFloorY - 30, w: 26, h: 30 });
             break;
 
         case 'plataformas_flotantes_secuenciales':
-            // Dos plataformas flotantes a distinta altura con vacío en el suelo. Tienes que saltar en el aire de una a otra
             spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 220, h: groundHeight });
             spawnQueue.push({ type: 'puente', xOffset: 10, y: baseFloorY - 45, w: 60, h: 15 });
             spawnQueue.push({ type: 'puente', xOffset: 120, y: baseFloorY - 80, w: 60, h: 15 });
@@ -263,7 +261,6 @@ function update() {
     let groundY = canvas.height - groundHeight - player.size;
     let actualGroundY = groundY; 
 
-    // CONTROL DE SPAWN EN COLA
     obstacleTimer++;
     if (obstacleTimer >= obstacleInterval) {
         if (spawnQueue.length === 0) {
@@ -282,12 +279,10 @@ function update() {
             });
         }
 
-        // Mayor tiempo de respiro entre estructuras completas para que el juego respire
         obstacleInterval = Math.floor(Math.random() * 60) + 130;
         obstacleTimer = 0;
     }
 
-    // CONTROL DE CAÍDA EN PRECIPICIOS
     for (let obs of obstacles) {
         if (obs.type === 'vacio') {
             if (player.x + 4 > obs.x && player.x + player.size - 4 < obs.x + obs.width) {
@@ -301,7 +296,6 @@ function update() {
         return;
     }
 
-    // COLISIONES INTEGRALES Y DETECCIÓN SUPERIOR PERFECTA
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.x -= gameSpeed;
@@ -324,7 +318,6 @@ function update() {
                 let feetY = player.y + player.size;
                 let prevFeetY = feetY - player.vy;
 
-                // Margen de tolerancia optimizado para caídas verticales limpias
                 if (player.vy >= 0 && prevFeetY <= obs.y + 10) {
                     player.y = obs.y - player.size;
                     player.vy = 0;
@@ -387,7 +380,6 @@ function gameOver() {
     actualizarLeaderboard();
 }
 
-// ACCIONES DE BOTONES
 startBtn.addEventListener("click", (e) => { e.stopPropagation(); startGame(); });
 btnAtras.addEventListener("click", (e) => {
     e.stopPropagation(); gameActive = false; isPressing = false;
@@ -402,7 +394,6 @@ btnAtras.addEventListener("click", (e) => {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // ANIMACIÓN DE DATOS FLOTANTES EN EL MENÚ
     if (!gameActive) {
         menuFloorScroll = (menuFloorScroll + 2) % 40;
         if (Math.random() < 0.04) {
@@ -424,10 +415,91 @@ function draw() {
         }
     }
 
-    // 1. Renderizado dinámico del suelo cortado por los precipicios
     ctx.strokeStyle = "#00ffaa";
     ctx.lineWidth = 4;
     ctx.shadowBlur = 10;
     ctx.shadowColor = "#00ffaa";
     
-    let
+    let baseFloorY = canvas.height - groundHeight;
+    let vaciosActivos = obstacles.filter(o => o.type === 'vacio');
+    
+    if (vaciosActivos.length === 0) {
+        ctx.beginPath();
+        ctx.moveTo(0, baseFloorY);
+        ctx.lineTo(canvas.width, baseFloorY);
+        ctx.stroke();
+    } else {
+        let startX = 0;
+        vaciosActivos.sort((a,b) => a.x - b.x);
+        
+        for (let v of vaciosActivos) {
+            if (v.x > startX) {
+                ctx.beginPath();
+                ctx.moveTo(startX, baseFloorY);
+                ctx.lineTo(v.x, baseFloorY);
+                ctx.stroke();
+            }
+            startX = v.x + v.width;
+        }
+        if (startX < canvas.width) {
+            ctx.beginPath();
+            ctx.moveTo(startX, baseFloorY);
+            ctx.lineTo(canvas.width, baseFloorY);
+            ctx.stroke();
+        }
+    }
+
+    if (!gameActive) {
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "rgba(0, 255, 170, 0.25)";
+        for (let x = -menuFloorScroll; x < canvas.width; x += 30) {
+            ctx.beginPath();
+            ctx.moveTo(x, baseFloorY);
+            ctx.lineTo(x - 20, canvas.height);
+            ctx.stroke();
+        }
+    }
+
+    if (gameActive) {
+        ctx.fillStyle = "#00d2ff";
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "#00d2ff";
+        ctx.fillRect(player.x, player.y, player.size, player.size);
+        ctx.strokeRect(player.x, player.y, player.size, player.size);
+    }
+
+    for (let obs of obstacles) {
+        if (obs.type === 'pincho') {
+            ctx.fillStyle = "#ff0055"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.shadowBlur = 15; ctx.shadowColor = "#ff0055";
+            ctx.beginPath();
+            ctx.moveTo(obs.x, obs.y + obs.height); ctx.lineTo(obs.x + obs.width / 2, obs.y); ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+        } else if (obs.type === 'bloque') {
+            ctx.fillStyle = "#ffaa00"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.shadowBlur = 10; ctx.shadowColor = "#ffaa00";
+            ctx.fillRect(obs.x, obs.y, obs.width, obs.height); ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+        } else if (obs.type === 'puente') {
+            ctx.fillStyle = "#bd00ff"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.shadowBlur = 10; ctx.shadowColor = "#bd00ff";
+            ctx.fillRect(obs.x, obs.y, obs.width, obs.height); ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+        }
+    }
+    ctx.shadowBlur = 0; 
+}
+
+// LOOPS
+function menuLoop() {
+    if (!gameActive) {
+        draw();
+        requestAnimationFrame(menuLoop);
+    }
+}
+menuLoop();
+
+function gameLoop() {
+    if (!gameActive) { requestAnimationFrame(menuLoop); return; }
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
