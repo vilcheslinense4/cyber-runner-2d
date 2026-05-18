@@ -12,7 +12,7 @@ resizeCanvas();
 let gameActive = false;
 let score = 0;
 let maxScore = 0;
-let distanceTraveled = 0; // Para medir el progreso de la barra
+let distanceTraveled = 0; 
 
 const overlay = document.getElementById("overlay");
 const startBtn = document.getElementById("start-btn");
@@ -21,26 +21,26 @@ const currentScoreElement = document.getElementById("current-score");
 const btnProyectos = document.getElementById("btn-volver-proyectos");
 const btnAtras = document.getElementById("btn-atras-inicio");
 
-// PROPIEDADES DEL JUGADOR (Añadido sistema de rotación y estela)
+// PROPIEDADES DEL JUGADOR (Cubo reducido a 22px para dar un 40% más de campo visual)
 const player = {
-    x: 60,
+    x: 70, // Un poco más a la izquierda para ganar espacio de reacción
     y: 0,
-    size: 30,
+    size: 22,          // REAJUSTADO (Antes 30px): Da más margen visual
     vy: 0,
-    gravity: 0.65, 
-    jumpForce: -11.5,
+    gravity: 0.52,     // REAJUSTADO para el nuevo tamaño de pantalla
+    jumpForce: -9.5,   // REAJUSTADO para una parábola proporcional perfecta
     isGrounded: false,
-    angle: 0,          // Ángulo de rotación visual
-    trail: []          // Lista para guardar las partículas de la estela
+    angle: 0,          
+    trail: []          
 };
 
-const groundHeight = 80;
+const groundHeight = 70; // Altura del suelo un poco más estilizada
 
 // VARIABLES DEL MOTOR DE OBSTÁCULOS
 let obstacles = [];
 let spawnQueue = []; 
 let minDistanceTimer = 0; 
-let gameSpeed = 5.5;         
+let gameSpeed = 4.4;      // Velocidad base reajustada al nuevo tamaño (se siente igual de rápido pero ves más pista)   
 
 // ANIMACIÓN DE FONDO PARA EL MENÚ
 let menuBackgroundElements = [];
@@ -50,7 +50,7 @@ let menuFloorScroll = 0;
 let isPressing = false;
 
 function handlePressStart(e) {
-    if (!gameActive) return;
+    if (!gameActive) return; 
     e.preventDefault(); 
     isPressing = true;
 }
@@ -182,13 +182,13 @@ function actualizarLeaderboard() {
 }
 
 // ==========================================
-// 🎮 MOTOR DE JUEGO AVANZADO
+// 🎮 MOTOR DE MAPEO CON CAMPO VISUAL AMPLIADO
 // ==========================================
 
 function startGame() {
     gameActive = true;
     score = 0;
-    gameSpeed = 5.5;
+    gameSpeed = 4.4; // Ajuste de velocidad inicial proporcional
     distanceTraveled = 0;
     obstacles = []; 
     spawnQueue = [];
@@ -221,33 +221,37 @@ function generarEstructuraAleatoria() {
 
     switch(seleccion) {
         case 'escalera_ritmica':
-            spawnQueue.push({ type: 'bloque', xOffset: 0, y: baseFloorY - 30, w: 30, h: 30 });
-            spawnQueue.push({ type: 'bloque', xOffset: 110, y: baseFloorY - 60, w: 30, h: 60 });
-            spawnQueue.push({ type: 'bloque', xOffset: 220, y: baseFloorY - 90, w: 30, h: 90 });
+            // ¡NUEVA DISTANCIA DE CAMPO ALEJADO!
+            // Con el zoom out aplicado, la parábola matemática exacta de caída es de 144 píxeles.
+            // Los bloques bajan proporcionalmente a 22px de ancho.
+            spawnQueue.push({ type: 'bloque', xOffset: 0, y: baseFloorY - 22, w: 22, h: 22 });
+            spawnQueue.push({ type: 'bloque', xOffset: 144, y: baseFloorY - 44, w: 22, h: 44 });
+            spawnQueue.push({ type: 'bloque', xOffset: 288, y: baseFloorY - 66, w: 22, h: 66 });
             break;
 
         case 'doble_pincho_suelo':
-            spawnQueue.push({ type: 'pincho', xOffset: 0, y: baseFloorY - 30, w: 28, h: 30 });
-            spawnQueue.push({ type: 'pincho', xOffset: 28, y: baseFloorY - 30, w: 28, h: 30 });
+            spawnQueue.push({ type: 'pincho', xOffset: 0, y: baseFloorY - 22, w: 20, h: 22 });
+            spawnQueue.push({ type: 'pincho', xOffset: 20, y: baseFloorY - 22, w: 20, h: 22 });
             break;
 
         case 'puente_con_obstaculo':
-            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 50, w: 160, h: 20 });
-            spawnQueue.push({ type: 'pincho', xOffset: 70, y: baseFloorY - 80, w: 26, h: 30 });
+            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 40, w: 120, h: 15 });
+            spawnQueue.push({ type: 'pincho', xOffset: 50, y: baseFloorY - 62, w: 20, h: 22 });
             break;
 
         case 'gran_precipicio':
-            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 95, h: groundHeight });
+            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 75, h: groundHeight });
             break;
 
         case 'tunel_laser':
-            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 65, w: 140, h: 20 });
+            // Pasillo adaptado perfectamente para los 22px del cubo. Pasa sobrado.
+            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 50, w: 110, h: 15 });
             break;
 
         case 'plataformas_flotantes_secuenciales':
-            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 240, h: groundHeight });
-            spawnQueue.push({ type: 'puente', xOffset: 10, y: baseFloorY - 45, w: 60, h: 15 });
-            spawnQueue.push({ type: 'puente', xOffset: 130, y: baseFloorY - 80, w: 60, h: 15 });
+            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 180, h: groundHeight });
+            spawnQueue.push({ type: 'puente', xOffset: 10, y: baseFloorY - 32, w: 45, h: 12 });
+            spawnQueue.push({ type: 'puente', xOffset: 100, y: baseFloorY - 60, w: 45, h: 12 });
             break;
     }
 }
@@ -255,21 +259,17 @@ function generarEstructuraAleatoria() {
 function update() {
     if (!gameActive) return;
 
-    // Aumentar la barra de progreso general
     distanceTraveled += gameSpeed * 0.05;
 
     player.vy += player.gravity;
     player.y += player.vy;
 
-    // --- MEJORA: Sistema de Estela de Partículas ---
-    player.trail.push({ x: player.x, y: player.y, opacity: 0.5 });
-    if (player.trail.length > 10) player.trail.shift(); // Conservar solo los últimos 10 fotogramas
+    player.trail.push({ x: player.x, y: player.y });
+    if (player.trail.length > 8) player.trail.shift(); 
 
-    // --- MEJORA: Animación de Rotación ---
     if (!player.isGrounded) {
-        player.angle += 0.09; // Gira de forma continua en el aire
+        player.angle += 0.1; 
     } else {
-        // Al tocar el suelo, alineamos de forma limpia al ángulo plano más cercano (múltiplos de 90° o Pi/2)
         let targetAngle = Math.round(player.angle / (Math.PI / 2)) * (Math.PI / 2);
         player.angle += (targetAngle - player.angle) * 0.3; 
     }
@@ -282,7 +282,7 @@ function update() {
     if (minDistanceTimer <= 0 && spawnQueue.length === 0) {
         generarEstructuraAleatoria();
         
-        let currentX = canvas.width + 50; 
+        let currentX = canvas.width + 60; 
         let maxSpread = 0;
 
         while (spawnQueue.length > 0) {
@@ -298,12 +298,13 @@ function update() {
                 maxSpread = item.xOffset + item.w;
             }
         }
-        minDistanceTimer = maxSpread + 280; 
+        // Margen extra de confort visual de 320px tras pasar el bloque
+        minDistanceTimer = maxSpread + 320; 
     }
 
     for (let obs of obstacles) {
         if (obs.type === 'vacio') {
-            if (player.x + 4 > obs.x && player.x + player.size - 4 < obs.x + obs.width) {
+            if (player.x + 3 > obs.x && player.x + player.size - 3 < obs.x + obs.width) {
                 actualGroundY = canvas.height + 100; 
             }
         }
@@ -336,7 +337,7 @@ function update() {
                 let feetY = player.y + player.size;
                 let prevFeetY = feetY - player.vy;
 
-                if (player.vy >= 0 && prevFeetY <= obs.y + 10) {
+                if (player.vy >= 0 && prevFeetY <= obs.y + 8) {
                     player.y = obs.y - player.size;
                     player.vy = 0;
                     player.isGrounded = true;
@@ -352,7 +353,7 @@ function update() {
             obstacles.splice(i, 1);
             score++;
             currentScoreElement.innerText = String(score).padStart(4, '0');
-            if (score % 6 === 0) gameSpeed += 0.35; 
+            if (score % 6 === 0) gameSpeed += 0.3; // Sube la dificultad paulatinamente como bien decías
         }
     }
 
@@ -479,15 +480,13 @@ function draw() {
         }
     }
 
-    // --- RENDER JUGADOR CON EFECTOS NUEVOS ---
+    // RENDER JUGADOR
     if (gameActive) {
-        // Dibujar estela neón trasera primero
         player.trail.forEach((t, index) => {
-            ctx.fillStyle = `rgba(0, 210, 255, ${index * 0.04})`;
+            ctx.fillStyle = `rgba(0, 210, 255, ${index * 0.05})`;
             ctx.fillRect(t.x, t.y, player.size, player.size);
         });
 
-        // Dibujar cubo principal rotado
         ctx.save();
         ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
         ctx.rotate(player.angle);
@@ -498,13 +497,12 @@ function draw() {
         ctx.shadowBlur = 15;
         ctx.shadowColor = "#00d2ff";
         
-        // Dibujamos el cuadrado centrado en su origen de rotación
         ctx.fillRect(-player.size / 2, -player.size / 2, player.size, player.size);
         ctx.strokeRect(-player.size / 2, -player.size / 2, player.size, player.size);
         ctx.restore();
     }
 
-    // Dibujar obstáculos
+    // RENDER OBSTÁCULOS
     for (let obs of obstacles) {
         if (obs.type === 'pincho') {
             ctx.fillStyle = "#ff0055"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.shadowBlur = 15; ctx.shadowColor = "#ff0055";
@@ -521,30 +519,27 @@ function draw() {
     }
     ctx.shadowBlur = 0; 
 
-    // --- MEJORA: Dibujar Barra de Progreso Superior (Estilo GD) ---
+    // BARRA DE PROGRESO SUPERIOR
     if (gameActive) {
         let barWidth = canvas.width * 0.4;
         let barX = (canvas.width - barWidth) / 2;
         let barY = 15;
-        let progress = (distanceTraveled % 100) / 100; // Porcentaje cíclico para modo infinito
+        let progress = (distanceTraveled % 100) / 100; 
 
-        // Fondo gris de la barra
         ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
         ctx.fillRect(barX, barY, barWidth, 4);
 
-        // Progreso neón relleno
         ctx.fillStyle = "#00ffaa";
         ctx.shadowBlur = 8;
         ctx.shadowColor = "#00ffaa";
         ctx.fillRect(barX, barY, barWidth * progress, 4);
         ctx.shadowBlur = 0;
 
-        // Texto de porcentaje
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 11px Courier New";
         ctx.textAlign = "center";
         ctx.fillText(`${Math.floor(progress * 100)}%`, canvas.width / 2, barY + 16);
-        ctx.textAlign = "left"; // Restaurar
+        ctx.textAlign = "left"; 
     }
 }
 
