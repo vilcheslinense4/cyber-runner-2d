@@ -55,6 +55,7 @@ body {
     -webkit-backdrop-filter: blur(8px);
     transition: all 0.2s ease;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    cursor: pointer; /* Asegura el cursor de mano en el botón de atrás */
 }
 
 .btn-volver:active {
@@ -177,4 +178,9 @@ canvas {
 .cyber-btn:active {
     transform: scale(0.96);
     box-shadow: 0 0 5px rgba(0, 255, 170, 0.1);
+}
+
+/* --- CLASE DE NAVEGACIÓN NUEVA --- */
+.hidden {
+    display: none !important;
 }
