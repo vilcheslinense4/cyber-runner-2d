@@ -12,7 +12,6 @@
         <div class="scanlines"></div>
 
         <a href="https://vilcheslinense4.github.io/Mi-primer-portafolios/" id="btn-volver-proyectos" class="btn-volver">⬅️ Volver a Proyectos</a>
-        
         <button id="btn-atras-inicio" class="btn-volver hidden">⬅️ Atrás</button>
 
         <div class="hud">
@@ -23,12 +22,52 @@
         <canvas id="gameCanvas"></canvas>
 
         <div id="overlay" class="overlay">
-            <div class="menu-box">
+            
+            <div id="menu-principal" class="menu-box">
                 <div class="cyber-badge">SYSTEM: BOOT_READY_</div>
                 <h1 class="neon-title">CYBER<br>RUNNER</h1>
                 <p id="game-message">> PULSA PARA INICIAR TRANSMISIÓN DE DATOS...</p>
+                
+                <div id="user-welcome" class="user-welcome-text hidden">HACKER: <span id="logged-username">GUEST</span></div>
+                
                 <button id="start-btn" class="cyber-btn">INICIAR CORE</button>
+                
+                <div class="auth-menu-buttons">
+                    <button id="btn-show-login" class="btn-secundario">Iniciar Sesión</button>
+                    <button id="btn-show-register" class="btn-secundario">Registrarse</button>
+                    <button id="btn-logout" class="btn-secundario hidden">Cerrar Sesión</button>
+                </div>
+
+                <div class="leaderboard-box">
+                    <h3>🏆 CLASIFICACIÓN GLOBAL</h3>
+                    <ul id="leaderboard-list">
+                        </ul>
+                </div>
             </div>
+
+            <div id="form-login" class="menu-box hidden">
+                <div class="cyber-badge">SECURE_LOGIN</div>
+                <h2 class="neon-subtitle">ACCESO AL SISTEMA</h2>
+                <p class="error-msg" id="login-error"></p>
+                <input type="email" id="login-email" placeholder="Correo Electrónico" class="cyber-input">
+                <input type="password" id="login-password" placeholder="Contraseña" class="cyber-input">
+                <button id="btn-submit-login" class="cyber-btn">ENTRAR</button>
+                <button id="btn-cancel-login" class="btn-secundario">Cancelar</button>
+            </div>
+
+            <div id="form-register" class="menu-box hidden">
+                <div class="cyber-badge">NEW_IDENTITY</div>
+                <h2 class="neon-subtitle">REGISTRO DE HACKER</h2>
+                <p class="error-msg" id="register-error"></p>
+                <input type="text" id="reg-name" placeholder="Nombre" class="cyber-input">
+                <input type="text" id="reg-lastname" placeholder="Apellidos" class="cyber-input">
+                <input type="email" id="reg-email" placeholder="Correo Electrónico" class="cyber-input">
+                <input type="password" id="reg-pass1" placeholder="Contraseña" class="cyber-input">
+                <input type="password" id="reg-pass2" placeholder="Repite Contraseña" class="cyber-input">
+                <button id="btn-submit-register" class="cyber-btn">CREAR CUENTA</button>
+                <button id="btn-cancel-register" class="btn-secundario">Cancelar</button>
+            </div>
+
         </div>
     </div>
 
