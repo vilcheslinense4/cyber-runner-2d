@@ -26,20 +26,21 @@ const player = {
     y: 0,
     size: 30,
     vy: 0,
-    gravity: 0.6,
-    jumpForce: -12,
+    gravity: 0.65, // Un pelo más pesado para mejor control estilo arcade
+    jumpForce: -11.5,
     isGrounded: false
 };
 
 const groundHeight = 80;
 
-// VARIABLES DEL MOTOR DE OBSTÁCULOS
+// VARIABLES DEL MOTOR DE OBSTÁCULOS (GEOMETRY DASH PATTERNS)
 let obstacles = [];
+let spawnQueue = []; // Cola para lanzar estructuras completas (escaleras, puentes)
 let obstacleTimer = 0;
-let obstacleInterval = 100; 
-let gameSpeed = 5;         
+let obstacleInterval = 90; 
+let gameSpeed = 5.5;         
 
-// ANIMACIÓN DE FONDO PARA EL MENÚ (MATRIX / TECH STYLE)
+// ANIMACIÓN DE FONDO PARA EL MENÚ
 let menuBackgroundElements = [];
 let menuFloorScroll = 0;
 
@@ -64,33 +65,27 @@ window.addEventListener("mouseup", handlePressEnd);
 // ==========================================
 let currentUser = null;
 
-// Selectores Auth
 const menuPrincipal = document.getElementById("menu-principal");
 const formLogin = document.getElementById("form-login");
 const formRegister = document.getElementById("form-register");
-
 const userWelcome = document.getElementById("user-welcome");
 const loggedUsername = document.getElementById("logged-username");
-
 const btnShowLogin = document.getElementById("btn-show-login");
 const btnShowRegister = document.getElementById("btn-show-register");
 const btnLogout = document.getElementById("btn-logout");
 
-// Inicializar base de datos local si no existe
 if (!localStorage.getItem("cyberUsers")) {
     localStorage.setItem("cyberUsers", JSON.stringify([]));
 }
 
-// Cargar clasificaciones al inicio
 actualizarLeaderboard();
 
-// Cambiar de menús
 btnShowLogin.addEventListener("click", () => { menuPrincipal.classList.add("hidden"); formLogin.classList.remove("hidden"); });
 btnShowRegister.addEventListener("click", () => { menuPrincipal.classList.add("hidden"); formRegister.classList.remove("hidden"); });
 document.getElementById("btn-cancel-login").addEventListener("click", () => { formLogin.classList.add("hidden"); menuPrincipal.classList.remove("hidden"); });
 document.getElementById("btn-cancel-register").addEventListener("click", () => { formRegister.classList.add("hidden"); menuPrincipal.classList.remove("hidden"); });
 
-// REGISTRO CON TUS REGLAS STRICTAS
+// REGISTRO
 document.getElementById("btn-submit-register").addEventListener("click", () => {
     const name = document.getElementById("reg-name").value.trim();
     const lastname = document.getElementById("reg-lastname").value.trim();
@@ -110,7 +105,6 @@ document.getElementById("btn-submit-register").addEventListener("click", () => {
         return;
     }
     
-    // Reglas de contraseña: Mínimo 9 caracteres, 1 mayúscula, 1 minúscula, 1 número
     const regexValidar = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{9,}$/;
     if (!regexValidar.test(pass1)) {
         errorEl.innerText = "⚠️ Contraseña inválida. Mínimo 9 letras, incluye una Mayúscula, una Minúscula y un Número.";
@@ -123,7 +117,6 @@ document.getElementById("btn-submit-register").addEventListener("click", () => {
         return;
     }
 
-    // Guardar usuario nuevo
     const nuevoUsuario = { name, lastname, email, password: pass1, maxScore: 0 };
     usuarios.push(nuevoUsuario);
     localStorage.setItem("cyberUsers", JSON.stringify(usuarios));
@@ -133,7 +126,7 @@ document.getElementById("btn-submit-register").addEventListener("click", () => {
     formLogin.classList.remove("hidden");
 });
 
-// INICIO DE SESIÓN
+// LOGIN
 document.getElementById("btn-submit-login").addEventListener("click", () => {
     const email = document.getElementById("login-email").value.trim().toLowerCase();
     const pass = document.getElementById("login-password").value;
@@ -162,7 +155,7 @@ document.getElementById("btn-submit-login").addEventListener("click", () => {
     actualizarLeaderboard();
 });
 
-// CERRAR SESIÓN
+// LOGOUT
 btnLogout.addEventListener("click", () => {
     currentUser = null;
     maxScore = 0;
@@ -178,11 +171,7 @@ function actualizarLeaderboard() {
     const list = document.getElementById("leaderboard-list");
     list.innerHTML = "";
     let usuarios = JSON.parse(localStorage.getItem("cyberUsers")) || [];
-    
-    // Ordenar de mayor a menor récord
     usuarios.sort((a, b) => b.maxScore - a.maxScore);
-    
-    // Mostrar top 5
     usuarios.slice(0, 5).forEach((u, index) => {
         const li = document.createElement("li");
         if (currentUser && u.email === currentUser.email) li.className = "top-player";
@@ -192,14 +181,15 @@ function actualizarLeaderboard() {
 }
 
 // ==========================================
-// 🎮 MOTOR Y LÓGICA DEL JUEGO
+// 🎮 MOTOR Y DISEÑO DE NIVELES AVANZADO
 // ==========================================
 
 function startGame() {
     gameActive = true;
     score = 0;
-    gameSpeed = 5;
+    gameSpeed = 5.5;
     obstacles = []; 
+    spawnQueue = [];
     obstacleTimer = 0;
     currentScoreElement.innerText = "0000";
     
@@ -213,6 +203,47 @@ function startGame() {
     requestAnimationFrame(gameLoop);
 }
 
+// GENERADOR DE MAPAS POR COMPONENTES (PATRONES DE GEOMETRY DASH)
+function generarEstructuraAleatoria() {
+    const estructuras = ['triple_pincho', 'escalera', 'puente_alto', 'precipicio', 'bloque_simple'];
+    const seleccion = estructuras[Math.floor(Math.random() * estructuras.length)];
+
+    let baseFloorY = canvas.height - groundHeight;
+
+    switch(seleccion) {
+        case 'bloque_simple':
+            spawnQueue.push({ type: 'bloque', xOffset: 0, y: baseFloorY - 30, w: 30, h: 30 });
+            break;
+
+        case 'triple_pincho':
+            // Lanza 2 o 3 pinchos pegados uno detrás de otro
+            let cant = Math.random() > 0.5 ? 2 : 3;
+            for(let i = 0; i < cant; i++) {
+                spawnQueue.push({ type: 'pincho', xOffset: i * 28, y: baseFloorY - 30, w: 28, h: 30 });
+            }
+            break;
+
+        case 'escalera':
+            // Escalera de bloques naranjas en subida
+            spawnQueue.push({ type: 'bloque', xOffset: 0, y: baseFloorY - 30, w: 30, h: 30 });
+            spawnQueue.push({ type: 'bloque', xOffset: 30, y: baseFloorY - 60, w: 30, h: 60 });
+            spawnQueue.push({ type: 'bloque', xOffset: 60, y: baseFloorY - 90, w: 30, h: 90 });
+            break;
+
+        case 'puente_alto':
+            // Plataforma flotante morada con pinchos letales debajo
+            spawnQueue.push({ type: 'pincho', xOffset: 30, y: baseFloorY - 30, w: 30, h: 30 });
+            spawnQueue.push({ type: 'pincho', xOffset: 60, y: baseFloorY - 30, w: 30, h: 30 });
+            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 85, w: 120, h: 20 });
+            break;
+
+        case 'precipicio':
+            // Un agujero en el suelo firme (Se simula creando un bloque invisible/vació en el render del suelo)
+            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 100, h: groundHeight });
+            break;
+    }
+}
+
 function update() {
     if (!gameActive) return;
 
@@ -221,33 +252,61 @@ function update() {
 
     let onPlatform = false;
     let groundY = canvas.height - groundHeight - player.size;
+    let actualGroundY = groundY; // El suelo firme por defecto
 
-    // Generador aleatorio de obstáculos
+    // --- MANEJO DE LA COLA DE SPAWN ---
     obstacleTimer++;
     if (obstacleTimer >= obstacleInterval) {
-        const types = ['pincho', 'bloque', 'puente'];
-        const randomType = types[Math.floor(Math.random() * types.length)];
-        let obsWidth = 30, obsHeight = 30;
+        if (spawnQueue.length === 0) {
+            generarEstructuraAleatoria();
+        }
         
-        if (randomType === 'puente') { obsWidth = 90; obsHeight = 20; }
+        // Sacar los elementos de la cola y ponerlos en el mapa
+        let currentX = canvas.width;
+        while (spawnQueue.length > 0) {
+            let item = spawnQueue.shift();
+            obstacles.push({
+                x: currentX + item.xOffset,
+                y: item.y,
+                width: item.w,
+                height: item.h,
+                type: item.type
+            });
+        }
 
-        obstacles.push({
-            x: canvas.width,
-            y: canvas.height - groundHeight - obsHeight,
-            width: obsWidth,
-            height: obsHeight,
-            type: randomType
-        });
-        
-        obstacleInterval = Math.floor(Math.random() * 40) + 80;
+        // Intervalo de separación entre estructuras completas
+        obstacleInterval = Math.floor(Math.random() * 50) + 110;
         obstacleTimer = 0;
     }
 
-    // Colisiones inteligentes
+    // --- DETECCIÓN SI EL JUGADOR SE CAE POR UN PRECIPICIO ---
+    // Revisamos si debajo del jugador hay un bloque de tipo 'vacio' abierto
+    for (let obs of obstacles) {
+        if (obs.type === 'vacio') {
+            if (player.x + 5 > obs.x && player.x + player.size - 5 < obs.x + obs.width) {
+                actualGroundY = canvas.height + 100; // El suelo desaparece, cae al vacío
+            }
+        }
+    }
+
+    // Si cae al vacío absoluto del lienzo, muere
+    if (player.y > canvas.height) {
+        gameOver();
+        return;
+    }
+
+    // --- PROCESADO DE OBSTÁCULOS Y COLISIONES ---
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.x -= gameSpeed;
 
+        // Ignoramos colisiones físicas directas con el vacío del suelo
+        if (obs.type === 'vacio') {
+            if (obs.x + obs.width < 0) obstacles.splice(i, 1);
+            continue;
+        }
+
+        // Caja de colisión estándar
         let collision = player.x < obs.x + obs.width &&
                         player.x + player.size > obs.x &&
                         player.y < obs.y + obs.height &&
@@ -257,41 +316,46 @@ function update() {
             if (obs.type === 'pincho') {
                 gameOver();
                 return;
-            } else {
-                let overlapX = Math.min(player.x + player.size - obs.x, obs.x + obs.width - player.x);
-                let overlapY = Math.min(player.y + player.size - obs.y, obs.y + obs.height - player.y);
+            } else if (obs.type === 'bloque' || obs.type === 'puente') {
+                // FÍSICAS DE CAJA ULTRA LIMPIAS (Margen de caída del 25% superior)
+                let feetY = player.y + player.size;
+                let prevFeetY = feetY - player.vy;
 
-                if (overlapX > overlapY) {
-                    if (player.vy > 0 && player.y + player.size - player.vy <= obs.y + 4) {
-                        player.y = obs.y - player.size;
-                        player.vy = 0;
-                        player.isGrounded = true;
-                        onPlatform = true;
-                    } else {
-                        gameOver();
-                        return;
-                    }
+                // Si venimos cayendo y nuestros pies estaban por encima del lomo del bloque
+                if (player.vy >= 0 && prevFeetY <= obs.y + 8) {
+                    player.y = obs.y - player.size;
+                    player.vy = 0;
+                    player.isGrounded = true;
+                    onPlatform = true;
                 } else {
+                    // Si le damos por el frente (pared lateral izquierda) o por debajo -> Game Over
                     gameOver();
                     return;
                 }
             }
         }
 
+        // Eliminar si sale de pantalla y otorgar puntos
         if (obs.x + obs.width < 0) {
             obstacles.splice(i, 1);
             score++;
             currentScoreElement.innerText = String(score).padStart(4, '0');
-            if (score % 5 === 0) gameSpeed += 0.4;
+            if (score % 6 === 0) gameSpeed += 0.35; // Aceleración fluida
         }
     }
 
-    if (!onPlatform && player.y >= groundY) {
-        player.y = groundY;
-        player.vy = 0;
-        player.isGrounded = true;
+    // Aplicar el suelo correspondiente (Suelo normal o vacío de precipicio)
+    if (!onPlatform) {
+        if (player.y >= actualGroundY) {
+            player.y = actualGroundY;
+            player.vy = 0;
+            player.isGrounded = true;
+        } else {
+            player.isGrounded = false;
+        }
     }
 
+    // Saltar continuamente si se mantiene pulsado
     if (isPressing && player.isGrounded) {
         player.vy = player.jumpForce;
         player.isGrounded = false;
@@ -302,14 +366,12 @@ function gameOver() {
     gameActive = false;
     isPressing = false;
 
-    // Guardar marcador si hay cuenta logueada
     if (currentUser) {
         if (score > currentUser.maxScore) {
             currentUser.maxScore = score;
             maxScore = score;
             document.getElementById("max-score").innerText = String(maxScore).padStart(4, '0');
             
-            // Actualizar en base de datos local
             let usuarios = JSON.parse(localStorage.getItem("cyberUsers"));
             let idx = usuarios.findIndex(u => u.email === currentUser.email);
             if (idx !== -1) {
@@ -326,23 +388,33 @@ function gameOver() {
     actualizarLeaderboard();
 }
 
-// DRAW GRAPHICS & ANIMACIÓN DE MENÚ
+// ACCIONES DE BOTONES
+startBtn.addEventListener("click", (e) => { e.stopPropagation(); startGame(); });
+btnAtras.addEventListener("click", (e) => {
+    e.stopPropagation(); gameActive = false; isPressing = false;
+    btnAtras.classList.add("hidden"); btnProyectos.classList.remove("hidden");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    document.getElementById("game-message").innerText = "> PULSA PARA INICIAR TRANSMISIÓN DE DATOS...";
+    overlay.style.display = "flex";
+    requestAnimationFrame(menuLoop);
+});
+
+// DRAW GRAPHICS
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // --- LOGICA DE LA ANIMACIÓN DE FONDO ---
+    // --- ANIMACIÓN DE DATOS DE FONDO EN EL MENÚ ---
     if (!gameActive) {
         menuFloorScroll = (menuFloorScroll + 2) % 40;
-        if (Math.random() < 0.03) { // Generar datos flotantes de fondo
+        if (Math.random() < 0.04) {
             menuBackgroundElements.push({
                 x: canvas.width,
-                y: Math.random() * (canvas.height - 150),
+                y: Math.random() * (canvas.height - 160) + 40,
                 text: Math.random() > 0.5 ? "0" : "1",
-                speed: Math.random() * 1 + 0.5,
-                opacity: Math.random() * 0.2 + 0.05
+                speed: Math.random() * 0.8 + 0.4,
+                opacity: Math.random() * 0.15 + 0.04
             });
         }
-        // Mover y pintar datos flotantes
         for (let i = menuBackgroundElements.length - 1; i >= 0; i--) {
             let data = menuBackgroundElements[i];
             data.x -= data.speed;
@@ -353,29 +425,59 @@ function draw() {
         }
     }
 
-    // 1. Suelo de Neón animado en el menú
+    // 1. Dibujar Suelo de Neón (Cortándose dinámicamente si hay un precipicio/vacío)
     ctx.strokeStyle = "#00ffaa";
     ctx.lineWidth = 4;
     ctx.shadowBlur = 10;
     ctx.shadowColor = "#00ffaa";
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height - groundHeight);
-    ctx.lineTo(canvas.width, canvas.height - groundHeight);
-    ctx.stroke();
+    
+    let baseFloorY = canvas.height - groundHeight;
 
-    // Líneas secundarias del suelo para notar el movimiento del menú
+    // Dibujamos el suelo por tramos revisando si hay huecos vacíos
+    let vaciosActivos = obstacles.filter(o => o.type === 'vacio');
+    
+    if (vaciosActivos.length === 0) {
+        // Suelo completo continuo si no hay precipicios en pantalla
+        ctx.beginPath();
+        ctx.moveTo(0, baseFloorY);
+        ctx.lineTo(canvas.width, baseFloorY);
+        ctx.stroke();
+    } else {
+        // Si hay precipicios, cortamos el trazo del suelo
+        let startX = 0;
+        vaciosActivos.sort((a,b) => a.x - b.x);
+        
+        for (let v of vaciosActivos) {
+            if (v.x > startX) {
+                ctx.beginPath();
+                ctx.moveTo(startX, baseFloorY);
+                ctx.lineTo(v.x, baseFloorY);
+                ctx.stroke();
+            }
+            startX = v.x + v.width;
+        }
+        if (startX < canvas.width) {
+            ctx.beginPath();
+            ctx.moveTo(startX, baseFloorY);
+            ctx.lineTo(canvas.width, baseFloorY);
+            ctx.stroke();
+        }
+    }
+
+    // Líneas decorativas del suelo en cuadrícula para el menú principal
     if (!gameActive) {
         ctx.lineWidth = 1;
-        ctx.strokeStyle = "rgba(0, 255, 170, 0.3)";
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "rgba(0, 255, 170, 0.25)";
         for (let x = -menuFloorScroll; x < canvas.width; x += 30) {
             ctx.beginPath();
-            ctx.moveTo(x, canvas.height - groundHeight);
+            ctx.moveTo(x, baseFloorY);
             ctx.lineTo(x - 20, canvas.height);
             ctx.stroke();
         }
     }
 
-    // 2. Jugador (Solo se pinta si se está jugando)
+    // 2. Dibujar Jugador (Solo si la partida está en curso)
     if (gameActive) {
         ctx.fillStyle = "#00d2ff";
         ctx.strokeStyle = "#ffffff";
@@ -386,7 +488,7 @@ function draw() {
         ctx.strokeRect(player.x, player.y, player.size, player.size);
     }
 
-    // 3. Dibujar Obstáculos
+    // 3. Dibujar Obstáculos Estructurados
     for (let obs of obstacles) {
         if (obs.type === 'pincho') {
             ctx.fillStyle = "#ff0055"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.shadowBlur = 15; ctx.shadowColor = "#ff0055";
@@ -404,14 +506,14 @@ function draw() {
     ctx.shadowBlur = 0; 
 }
 
-// ANIMACIÓN EN MENÚ O BUCLE ACTIVO
+// BUCLES DE RENDERIZADO
 function menuLoop() {
     if (!gameActive) {
         draw();
         requestAnimationFrame(menuLoop);
     }
 }
-menuLoop(); // Lanzamos la animación continua de fondo
+menuLoop();
 
 function gameLoop() {
     if (!gameActive) { requestAnimationFrame(menuLoop); return; }
@@ -419,14 +521,3 @@ function gameLoop() {
     draw();
     requestAnimationFrame(gameLoop);
 }
-
-// EVENTOS DE NAVEGACIÓN PRINCIPAL
-startBtn.addEventListener("click", (e) => { e.stopPropagation(); startGame(); });
-btnAtras.addEventListener("click", (e) => {
-    e.stopPropagation(); gameActive = false; isPressing = false;
-    btnAtras.classList.add("hidden"); btnProyectos.classList.remove("hidden");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    document.getElementById("game-message").innerText = "> PULSA PARA INICIAR TRANSMISIÓN DE DATOS...";
-    overlay.style.display = "flex";
-    requestAnimationFrame(menuLoop);
-});
