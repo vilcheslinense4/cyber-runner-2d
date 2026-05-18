@@ -26,16 +26,16 @@ const player = {
     y: 0,
     size: 30,
     vy: 0,
-    gravity: 0.65, // Un pelo más pesado para mejor control estilo arcade
+    gravity: 0.65, 
     jumpForce: -11.5,
     isGrounded: false
 };
 
 const groundHeight = 80;
 
-// VARIABLES DEL MOTOR DE OBSTÁCULOS (GEOMETRY DASH PATTERNS)
+// VARIABLES DEL MOTOR DE OBSTÁCULOS (NIVELES RÍTMICOS SEPARADOS)
 let obstacles = [];
-let spawnQueue = []; // Cola para lanzar estructuras completas (escaleras, puentes)
+let spawnQueue = []; 
 let obstacleTimer = 0;
 let obstacleInterval = 90; 
 let gameSpeed = 5.5;         
@@ -85,7 +85,6 @@ btnShowRegister.addEventListener("click", () => { menuPrincipal.classList.add("h
 document.getElementById("btn-cancel-login").addEventListener("click", () => { formLogin.classList.add("hidden"); menuPrincipal.classList.remove("hidden"); });
 document.getElementById("btn-cancel-register").addEventListener("click", () => { formRegister.classList.add("hidden"); menuPrincipal.classList.remove("hidden"); });
 
-// REGISTRO
 document.getElementById("btn-submit-register").addEventListener("click", () => {
     const name = document.getElementById("reg-name").value.trim();
     const lastname = document.getElementById("reg-lastname").value.trim();
@@ -126,7 +125,6 @@ document.getElementById("btn-submit-register").addEventListener("click", () => {
     formLogin.classList.remove("hidden");
 });
 
-// LOGIN
 document.getElementById("btn-submit-login").addEventListener("click", () => {
     const email = document.getElementById("login-email").value.trim().toLowerCase();
     const pass = document.getElementById("login-password").value;
@@ -155,7 +153,6 @@ document.getElementById("btn-submit-login").addEventListener("click", () => {
     actualizarLeaderboard();
 });
 
-// LOGOUT
 btnLogout.addEventListener("click", () => {
     currentUser = null;
     maxScore = 0;
@@ -181,7 +178,7 @@ function actualizarLeaderboard() {
 }
 
 // ==========================================
-// 🎮 MOTOR Y DISEÑO DE NIVELES AVANZADO
+// 🎮 NUEVO MOTOR DE DISEÑO DE MAPAS RÍTMICOS
 // ==========================================
 
 function startGame() {
@@ -203,43 +200,55 @@ function startGame() {
     requestAnimationFrame(gameLoop);
 }
 
-// GENERADOR DE MAPAS POR COMPONENTES (PATRONES DE GEOMETRY DASH)
 function generarEstructuraAleatoria() {
-    const estructuras = ['triple_pincho', 'escalera', 'puente_alto', 'precipicio', 'bloque_simple'];
+    // Lista expandida con más variedad de mapas estilo Geometry Dash
+    const estructuras = [
+        'escalera_ritmica', 
+        'doble_pincho_suelo', 
+        'puente_con_obstaculo', 
+        'gran_precipicio', 
+        'tunel_laser', 
+        'plataformas_flotantes_secuenciales'
+    ];
     const seleccion = estructuras[Math.floor(Math.random() * estructuras.length)];
-
     let baseFloorY = canvas.height - groundHeight;
 
     switch(seleccion) {
-        case 'bloque_simple':
+        case 'escalera_ritmica':
+            // ¡SOLUCIONADO! Escalones separados por 65px en horizontal para poder saltar cómodamente uno a uno
             spawnQueue.push({ type: 'bloque', xOffset: 0, y: baseFloorY - 30, w: 30, h: 30 });
+            spawnQueue.push({ type: 'bloque', xOffset: 95, y: baseFloorY - 60, w: 30, h: 60 });
+            spawnQueue.push({ type: 'bloque', xOffset: 190, y: baseFloorY - 90, w: 30, h: 90 });
             break;
 
-        case 'triple_pincho':
-            // Lanza 2 o 3 pinchos pegados uno detrás de otro
-            let cant = Math.random() > 0.5 ? 2 : 3;
-            for(let i = 0; i < cant; i++) {
-                spawnQueue.push({ type: 'pincho', xOffset: i * 28, y: baseFloorY - 30, w: 28, h: 30 });
-            }
+        case 'doble_pincho_suelo':
+            // Dos pinchos tradicionales juntos en el suelo firme
+            spawnQueue.push({ type: 'pincho', xOffset: 0, y: baseFloorY - 30, w: 28, h: 30 });
+            spawnQueue.push({ type: 'pincho', xOffset: 28, y: baseFloorY - 30, w: 28, h: 30 });
             break;
 
-        case 'escalera':
-            // Escalera de bloques naranjas en subida
-            spawnQueue.push({ type: 'bloque', xOffset: 0, y: baseFloorY - 30, w: 30, h: 30 });
-            spawnQueue.push({ type: 'bloque', xOffset: 30, y: baseFloorY - 60, w: 30, h: 60 });
-            spawnQueue.push({ type: 'bloque', xOffset: 60, y: baseFloorY - 90, w: 30, h: 90 });
+        case 'puente_con_obstaculo':
+            // Un puente morado largo por el que corres, pero te obliga a saltar un pincho que tiene arriba del lomo
+            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 50, w: 150, h: 20 });
+            spawnQueue.push({ type: 'pincho', xOffset: 60, y: baseFloorY - 80, w: 26, h: 30 });
             break;
 
-        case 'puente_alto':
-            // Plataforma flotante morada con pinchos letales debajo
-            spawnQueue.push({ type: 'pincho', xOffset: 30, y: baseFloorY - 30, w: 30, h: 30 });
-            spawnQueue.push({ type: 'pincho', xOffset: 60, y: baseFloorY - 30, w: 30, h: 30 });
-            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 85, w: 120, h: 20 });
+        case 'gran_precipicio':
+            // Un abismo largo en el suelo de 90px. Tienes que saltar justo en el borde para no caer
+            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 90, h: groundHeight });
             break;
 
-        case 'precipicio':
-            // Un agujero en el suelo firme (Se simula creando un bloque invisible/vació en el render del suelo)
-            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 100, h: groundHeight });
+        case 'tunel_laser':
+            // Techo de bloques morados altos y pinchos abajo. Tienes que calcular un salto corto y controlado
+            spawnQueue.push({ type: 'puente', xOffset: 0, y: baseFloorY - 110, w: 100, h: 20 });
+            spawnQueue.push({ type: 'pincho', xOffset: 35, y: baseFloorY - 30, w: 26, h: 30 });
+            break;
+
+        case 'plataformas_flotantes_secuenciales':
+            // Dos plataformas flotantes a distinta altura con vacío en el suelo. Tienes que saltar en el aire de una a otra
+            spawnQueue.push({ type: 'vacio', xOffset: 0, y: baseFloorY, w: 220, h: groundHeight });
+            spawnQueue.push({ type: 'puente', xOffset: 10, y: baseFloorY - 45, w: 60, h: 15 });
+            spawnQueue.push({ type: 'puente', xOffset: 120, y: baseFloorY - 80, w: 60, h: 15 });
             break;
     }
 }
@@ -252,16 +261,15 @@ function update() {
 
     let onPlatform = false;
     let groundY = canvas.height - groundHeight - player.size;
-    let actualGroundY = groundY; // El suelo firme por defecto
+    let actualGroundY = groundY; 
 
-    // --- MANEJO DE LA COLA DE SPAWN ---
+    // CONTROL DE SPAWN EN COLA
     obstacleTimer++;
     if (obstacleTimer >= obstacleInterval) {
         if (spawnQueue.length === 0) {
             generarEstructuraAleatoria();
         }
         
-        // Sacar los elementos de la cola y ponerlos en el mapa
         let currentX = canvas.width;
         while (spawnQueue.length > 0) {
             let item = spawnQueue.shift();
@@ -274,39 +282,35 @@ function update() {
             });
         }
 
-        // Intervalo de separación entre estructuras completas
-        obstacleInterval = Math.floor(Math.random() * 50) + 110;
+        // Mayor tiempo de respiro entre estructuras completas para que el juego respire
+        obstacleInterval = Math.floor(Math.random() * 60) + 130;
         obstacleTimer = 0;
     }
 
-    // --- DETECCIÓN SI EL JUGADOR SE CAE POR UN PRECIPICIO ---
-    // Revisamos si debajo del jugador hay un bloque de tipo 'vacio' abierto
+    // CONTROL DE CAÍDA EN PRECIPICIOS
     for (let obs of obstacles) {
         if (obs.type === 'vacio') {
-            if (player.x + 5 > obs.x && player.x + player.size - 5 < obs.x + obs.width) {
-                actualGroundY = canvas.height + 100; // El suelo desaparece, cae al vacío
+            if (player.x + 4 > obs.x && player.x + player.size - 4 < obs.x + obs.width) {
+                actualGroundY = canvas.height + 100; 
             }
         }
     }
 
-    // Si cae al vacío absoluto del lienzo, muere
     if (player.y > canvas.height) {
         gameOver();
         return;
     }
 
-    // --- PROCESADO DE OBSTÁCULOS Y COLISIONES ---
+    // COLISIONES INTEGRALES Y DETECCIÓN SUPERIOR PERFECTA
     for (let i = obstacles.length - 1; i >= 0; i--) {
         let obs = obstacles[i];
         obs.x -= gameSpeed;
 
-        // Ignoramos colisiones físicas directas con el vacío del suelo
         if (obs.type === 'vacio') {
             if (obs.x + obs.width < 0) obstacles.splice(i, 1);
             continue;
         }
 
-        // Caja de colisión estándar
         let collision = player.x < obs.x + obs.width &&
                         player.x + player.size > obs.x &&
                         player.y < obs.y + obs.height &&
@@ -317,34 +321,30 @@ function update() {
                 gameOver();
                 return;
             } else if (obs.type === 'bloque' || obs.type === 'puente') {
-                // FÍSICAS DE CAJA ULTRA LIMPIAS (Margen de caída del 25% superior)
                 let feetY = player.y + player.size;
                 let prevFeetY = feetY - player.vy;
 
-                // Si venimos cayendo y nuestros pies estaban por encima del lomo del bloque
-                if (player.vy >= 0 && prevFeetY <= obs.y + 8) {
+                // Margen de tolerancia optimizado para caídas verticales limpias
+                if (player.vy >= 0 && prevFeetY <= obs.y + 10) {
                     player.y = obs.y - player.size;
                     player.vy = 0;
                     player.isGrounded = true;
                     onPlatform = true;
                 } else {
-                    // Si le damos por el frente (pared lateral izquierda) o por debajo -> Game Over
                     gameOver();
                     return;
                 }
             }
         }
 
-        // Eliminar si sale de pantalla y otorgar puntos
         if (obs.x + obs.width < 0) {
             obstacles.splice(i, 1);
             score++;
             currentScoreElement.innerText = String(score).padStart(4, '0');
-            if (score % 6 === 0) gameSpeed += 0.35; // Aceleración fluida
+            if (score % 6 === 0) gameSpeed += 0.35; 
         }
     }
 
-    // Aplicar el suelo correspondiente (Suelo normal o vacío de precipicio)
     if (!onPlatform) {
         if (player.y >= actualGroundY) {
             player.y = actualGroundY;
@@ -355,7 +355,6 @@ function update() {
         }
     }
 
-    // Saltar continuamente si se mantiene pulsado
     if (isPressing && player.isGrounded) {
         player.vy = player.jumpForce;
         player.isGrounded = false;
@@ -403,7 +402,7 @@ btnAtras.addEventListener("click", (e) => {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // --- ANIMACIÓN DE DATOS DE FONDO EN EL MENÚ ---
+    // ANIMACIÓN DE DATOS FLOTANTES EN EL MENÚ
     if (!gameActive) {
         menuFloorScroll = (menuFloorScroll + 2) % 40;
         if (Math.random() < 0.04) {
@@ -425,99 +424,10 @@ function draw() {
         }
     }
 
-    // 1. Dibujar Suelo de Neón (Cortándose dinámicamente si hay un precipicio/vacío)
+    // 1. Renderizado dinámico del suelo cortado por los precipicios
     ctx.strokeStyle = "#00ffaa";
     ctx.lineWidth = 4;
     ctx.shadowBlur = 10;
     ctx.shadowColor = "#00ffaa";
     
-    let baseFloorY = canvas.height - groundHeight;
-
-    // Dibujamos el suelo por tramos revisando si hay huecos vacíos
-    let vaciosActivos = obstacles.filter(o => o.type === 'vacio');
-    
-    if (vaciosActivos.length === 0) {
-        // Suelo completo continuo si no hay precipicios en pantalla
-        ctx.beginPath();
-        ctx.moveTo(0, baseFloorY);
-        ctx.lineTo(canvas.width, baseFloorY);
-        ctx.stroke();
-    } else {
-        // Si hay precipicios, cortamos el trazo del suelo
-        let startX = 0;
-        vaciosActivos.sort((a,b) => a.x - b.x);
-        
-        for (let v of vaciosActivos) {
-            if (v.x > startX) {
-                ctx.beginPath();
-                ctx.moveTo(startX, baseFloorY);
-                ctx.lineTo(v.x, baseFloorY);
-                ctx.stroke();
-            }
-            startX = v.x + v.width;
-        }
-        if (startX < canvas.width) {
-            ctx.beginPath();
-            ctx.moveTo(startX, baseFloorY);
-            ctx.lineTo(canvas.width, baseFloorY);
-            ctx.stroke();
-        }
-    }
-
-    // Líneas decorativas del suelo en cuadrícula para el menú principal
-    if (!gameActive) {
-        ctx.lineWidth = 1;
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "rgba(0, 255, 170, 0.25)";
-        for (let x = -menuFloorScroll; x < canvas.width; x += 30) {
-            ctx.beginPath();
-            ctx.moveTo(x, baseFloorY);
-            ctx.lineTo(x - 20, canvas.height);
-            ctx.stroke();
-        }
-    }
-
-    // 2. Dibujar Jugador (Solo si la partida está en curso)
-    if (gameActive) {
-        ctx.fillStyle = "#00d2ff";
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 2;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "#00d2ff";
-        ctx.fillRect(player.x, player.y, player.size, player.size);
-        ctx.strokeRect(player.x, player.y, player.size, player.size);
-    }
-
-    // 3. Dibujar Obstáculos Estructurados
-    for (let obs of obstacles) {
-        if (obs.type === 'pincho') {
-            ctx.fillStyle = "#ff0055"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.shadowBlur = 15; ctx.shadowColor = "#ff0055";
-            ctx.beginPath();
-            ctx.moveTo(obs.x, obs.y + obs.height); ctx.lineTo(obs.x + obs.width / 2, obs.y); ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
-            ctx.closePath(); ctx.fill(); ctx.stroke();
-        } else if (obs.type === 'bloque') {
-            ctx.fillStyle = "#ffaa00"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.shadowBlur = 10; ctx.shadowColor = "#ffaa00";
-            ctx.fillRect(obs.x, obs.y, obs.width, obs.height); ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
-        } else if (obs.type === 'puente') {
-            ctx.fillStyle = "#bd00ff"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.shadowBlur = 10; ctx.shadowColor = "#bd00ff";
-            ctx.fillRect(obs.x, obs.y, obs.width, obs.height); ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
-        }
-    }
-    ctx.shadowBlur = 0; 
-}
-
-// BUCLES DE RENDERIZADO
-function menuLoop() {
-    if (!gameActive) {
-        draw();
-        requestAnimationFrame(menuLoop);
-    }
-}
-menuLoop();
-
-function gameLoop() {
-    if (!gameActive) { requestAnimationFrame(menuLoop); return; }
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-}
+    let
